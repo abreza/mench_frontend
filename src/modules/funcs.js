@@ -252,6 +252,30 @@ export const signUp = (username, password, first_name, last_name, gender, birthd
     }
 }
 
+
+export const editProfile = (username, password, first_name, last_name, gender, birthday, city) => {
+    let User = Parse.Object.extend("User");
+    let query = new Parse.Query(User);
+    let subscription = query.subscribe();
+    return dispatch => {
+        query.equalTo("username", username);
+        query.find({
+            success: function (list) {
+                if (list.length) {
+                    let user1 = list[0]
+                    user1.set("password", password);
+                    user1.set("first_name", first_name);
+                    user1.set("last_name", last_name);
+                    user1.set("gender", gender);
+                    user1.set("city", city);
+                    user1.set("score", 0);
+                    user1.save()
+                }
+            }
+        })
+    }
+}
+
 export const createNewGame = () => {
     let Game = Parse.Object.extend("Game");
     let query = new Parse.Query(Game);
