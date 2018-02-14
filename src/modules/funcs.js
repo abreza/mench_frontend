@@ -1,5 +1,4 @@
 import Parse from 'parse'
-import {push} from "react-router-redux/es/actions";
 export const MOVE_REQUESTED = 'funcs/MOVE_REQUESTED'
 export const SIGN_IN = 'funcs/SIGN_IN'
 export const SIGN_OUT = 'funcs/SIGN_OUT'
@@ -16,6 +15,8 @@ const initialState = {
     user: null,
     player2: null,
     game: null,
+    startGame: false,
+    toss: 0,
 }
 
 export default (state = initialState, action) => {
@@ -28,7 +29,8 @@ export default (state = initialState, action) => {
         case JOIN_GAME:
             return{
                 ...state,
-                game: action.game
+                game: action.game,
+                startGame: true
             }
         case WITH_PLAYER:
             return{
@@ -57,11 +59,13 @@ export default (state = initialState, action) => {
             }
         case MOVE_REQUESTED:
             let newPlace = state.place;
-            newPlace[state.turn - 1] += parseInt((Math.random() * 6) + 1);
+            let random = parseInt((Math.random() * 6) + 1);
+            newPlace[state.turn - 1] += random;
             return{
                 ...state,
                 place: newPlace,
                 turn: (state.turn) % 2 + 1,
+                toss: random,
             }
 
         default:
@@ -111,7 +115,6 @@ export const signUp = (username, password, first_name, last_name, gender, birthd
         user.set("first_name", first_name);
         user.set("last_name", last_name);
         user.set("gender", gender);
-        user.set("birthday", birthday);
         user.set("city", city);
         user.signUp(null, {
             success: function(user) {
@@ -170,21 +173,20 @@ export const createNewGame = () => {
 }
 
 export const joinToGame = (gameId) => {
-
     return dispatch => {
         let Game = Parse.Object.extend("Game");
         let query = new Parse.Query(Game);
-        query.equalTo("id", gameId);
+        query.equalTo("objectId", gameId);
         query.find({
             success:function(list) {
-                alert('hi')
-                push('/game')
                 if(list.length){
                     dispatch({
                         type: JOIN_GAME,
                         game: list[0],
                     });
+                    alert('you joined to this game ' + list[0].id)
                 }
+
             },
             error: function(list) {
 
@@ -192,3 +194,4 @@ export const joinToGame = (gameId) => {
         });
     }
 }
+

@@ -13,9 +13,8 @@ class SignUpForm extends React.Component {
         let first_name = this.refs.first_name.value;
         let last_name = this.refs.last_name.value;
         let gender = this.refs.gender.value;
-        let birthday = this.refs.birthday.value;
         let city = this.refs.city.value;
-        this.props.onSignUp(username, password, first_name, last_name, gender, birthday, city)
+        this.props.onSignUp(username, password, first_name, last_name, gender, city)
     }
     render() {
         return (
@@ -25,7 +24,6 @@ class SignUpForm extends React.Component {
                 <input type="text" ref="first_name" placeholder="enter your first_name"/>
                 <input type="text" ref="last_name" placeholder="enter your last_name"/>
                 <input type="text" ref="gender" placeholder="enter your gender"/>
-                <input type="date" ref="birthday" placeholder="enter your birthday"/>
                 <input type="text" ref="city" placeholder="enter your city"/>
                 <input type="password" ref="password" placeholder="enter password"/>
                 <input type="submit" value="SignUp"/>

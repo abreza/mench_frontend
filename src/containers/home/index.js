@@ -7,13 +7,15 @@ import {
 } from '../../modules/funcs'
 import {Link} from "react-router-dom";
 import withRouter from "react-router-dom/es/withRouter";
+import {push} from "react-router-redux";
 
 
 class JoinForm extends React.Component {
     join(e) {
         e.preventDefault();
         let gameId = this.refs.gameId.value;
-        this.props.onJoin(gameId)
+        this.props.onJoin(gameId);
+        this.props.changePage();
     }
     render() {
         return (
@@ -30,7 +32,7 @@ const Home = props => (
   <div>
     <h1>Home</h1>
       <button onClick={props.createNewGame} disabled={!props.user ? true : false}><Link to="/game">createNewGame</Link></button>
-      <JoinForm onJoin={props.joinToGame}/>
+      <JoinForm onJoin={props.joinToGame} changePage={props.changePage}/>
   </div>
 )
 
@@ -41,7 +43,8 @@ const mapStateToProps = state => ({
 const mapDispatchToProps = dispatch => bindActionCreators({
     createNewGame,
     joinToGame,
-}, dispatch)
+    changePage: () => push('/game'),
+}, dispatch);
 
 export default withRouter(connect(
   mapStateToProps,
