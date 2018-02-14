@@ -16,8 +16,26 @@ const initialState = {
     player2: null,
     game: null,
     startGame: false,
+    finish: false,
     toss: 0,
 }
+
+let map = new Map()
+map.set(1,38)
+map.set(4,14)
+map.set(9,31)
+map.set(17,7)
+map.set(21,42)
+map.set(28,84)
+map.set(54,34)
+map.set(51,67)
+map.set(62,19)
+map.set(64,60)
+map.set(80,100)
+map.set(87,24)
+map.set(71,91)
+map.set(93,73)
+map.set(98,79)
 
 export default (state = initialState, action) => {
     switch (action.type) {
@@ -61,6 +79,22 @@ export default (state = initialState, action) => {
             let newPlace = state.place;
             let random = parseInt((Math.random() * 6) + 1);
             newPlace[state.turn - 1] += random;
+            if(map.get(newPlace[state.turn - 1]))
+                newPlace[state.turn - 1] = map.get(newPlace[state.turn - 1])
+            if(map.get(newPlace[state.turn - 1]) > 100)
+                return{
+                    ...state,
+                    turn: (state.turn) % 2 + 1,
+                    toss: random,
+                }
+            if(map.get(newPlace[state.turn - 1]) == 100)
+                return{
+                    ...state,
+                    place: newPlace,
+                    turn: (state.turn) % 2 + 1,
+                    toss: random,
+                    finish: true,
+                }
             return{
                 ...state,
                 place: newPlace,
@@ -135,8 +169,6 @@ export const createNewGame = () => {
         let Game = Parse.Object.extend("Game");
         let newGame = new Game();
         newGame.set("player1", Parse.User.current().get('username'));
-        newGame.set("player1_position", 0);
-        newGame.set("player2_position", 0);
         newGame.save(null, {
             success: function(new_game) {
                 dispatch({

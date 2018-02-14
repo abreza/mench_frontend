@@ -5,7 +5,6 @@ import {
     randomGenerator
 } from '../../modules/funcs'
 
-
 let Background = 'board.gif'
 const Game = props => {
     if(props.game){
@@ -15,7 +14,19 @@ const Game = props => {
             var row = [];
             for (var j = 0; j < 10; j++) {
                 let x = (i%2)?10 * (9 - i) + (j) + 1:10 * (9 - i) + (9 - j) + 1
-                row.push(<td style={{textAlign:'center', height : '60px', width : '60px'}}>{x == props.game.get('player1_position')?<img style={{height : '60px', width : '60px'}} src={'blue.png'}/>:null}</td>);
+                row.push(
+                    <td style={{textAlign:'center', height : '60px', width : '60px'}}>
+                        {x == props.place[0]?
+                            <img style={{height : '60px', width : '60px'}} src={'blue.png'}/>
+                        :
+                            <div>
+                                {x == props.place[1]?
+                                    <img style={{height : '60px', width : '60px'}} src={'green.png'}/>:null
+                                }
+                            </div>
+                        }
+                    </td>
+                            );
             }
             table.push(<tr >{row}</tr>);
         }
@@ -51,6 +62,7 @@ const mapStateToProps = state => ({
     user: state.funcs.user,
     game: state.funcs.game,
     toss: state.funcs.toss,
+    place: state.funcs.place,
 })
 
 const mapDispatchToProps = dispatch => bindActionCreators({
