@@ -25,6 +25,25 @@ map.set(93,73)
 map.set(95,75)
 map.set(98,79)
 
+
+export const live = () =>{
+    let Game = Parse.Object.extend("Game");
+    let query = new Parse.Query(Game);
+    let subscription = query.subscribe();
+    return dispatch =>{
+        subscription.on('update', (game) => {
+            dispatch({
+                type: PLAY,
+                player2: game.get('player2'),
+                player1: game.get('player1'),
+                position1: game.get('player1_position'),
+                position2: game.get('player2_position'),
+                turn: game.get('turn'),
+            })
+        });
+    }
+}
+
 const initialState = {
     turn: 1,
     place: [0,0],
@@ -36,6 +55,7 @@ const initialState = {
     startGame: false,
     finish: false,
     toss: 0,
+    win: -1,
 }
 
 export default (state = initialState, action) => {
@@ -60,12 +80,15 @@ export default (state = initialState, action) => {
         case PLAY:
             if(state.player2 && state.player2!=action.player2)
                 return state
-            state.place[2 - state.myTurn] = action.position;
+            state.place[0] = action.position1;
+            state.place[1] = action.position2;
             return{
                 ...state,
+                player1: action.player1,
                 player2: action.player2,
                 turn: state.myTurn,
                 place: state.place,
+                turn: action.turn,
             }
         case SIGN_UP:
             return{
@@ -83,25 +106,31 @@ export default (state = initialState, action) => {
                 user: null
             }
         case MOVE_REQUESTED:
-            if(state.turn == state.myTurn){
+            if(state.turn == state.myTurn && state.win==-1){
                 let random = parseInt((Math.random() * 6) + 1);
-                let t = 0
+                let t = state.myTurn - 1
                 if(state.player2 == 'bot'){
                     if(state.place[t] + random <= 100){
                         state.place[t] += random;
                         state.place[t] = map.get(state.place[t]) || state.place[t]
                         state.game.set('player' + (t + 1) + '_position', state.place[t])
+                        state.game.set('turn', 2 - t)
                         state.game.save()
                         if(state.place[t] == 100){
+                            state.user.set('score', state.user.get('score') + 150)
+                            state.game.set('turn', 2 - t)
+                            state.user.save()
                             return{
                                 ...state,
                                 place: state.place,
                                 toss: random,
                                 finish: true,
+                                win:1,
                             }
                         }
                     }
                     state.game.set('player' + (t + 1) + '_position', state.place[t])
+                    state.game.set('turn', 2 - t)
                     state.game.save()
                     random = parseInt((Math.random() * 6) + 1);
                     t = 1
@@ -109,8 +138,11 @@ export default (state = initialState, action) => {
                         state.place[t] += random;
                         state.place[t] = map.get(state.place[t]) || state.place[t]
                         state.game.set('player' + (t + 1) + '_position', state.place[t])
+                        state.game.set('turn', 2 - t)
                         state.game.save()
                         if(state.place[t] == 100){
+                            state.user.set('score', state.user.get('score') + 50)
+                            state.user.save()
                             return{
                                 ...state,
                                 place: state.place,
@@ -121,6 +153,7 @@ export default (state = initialState, action) => {
 
                     }
                     state.game.set('player' + (t + 1) + '_position', state.place[t])
+                    state.game.set('turn', 2 - t)
                     state.game.save()
                     return{
                         ...state,
@@ -133,8 +166,11 @@ export default (state = initialState, action) => {
                         state.place[t] += random;
                         state.place[t] = map.get(state.place[t]) || state.place[t]
                         state.game.set('player' + (t + 1) + '_position', state.place[t])
+                        state.game.set('turn', 2 - t)
                         state.game.save()
                         if(state.place[t] == 100){
+                            state.user.set('score', state.user.get('score') + 150)
+                            state.user.save()
                             return{
                                 ...state,
                                 place: state.place,
@@ -201,6 +237,7 @@ export const signUp = (username, password, first_name, last_name, gender, birthd
         user.set("last_name", last_name);
         user.set("gender", gender);
         user.set("city", city);
+        user.set("score", 0);
         user.signUp(null, {
             success: function(user) {
                 dispatch({
@@ -216,23 +253,17 @@ export const signUp = (username, password, first_name, last_name, gender, birthd
 }
 
 export const createNewGame = () => {
+    let Game = Parse.Object.extend("Game");
+    let query = new Parse.Query(Game);
+    let subscription = query.subscribe();
     return dispatch => {
-        let Game = Parse.Object.extend("Game");
-        let query = new Parse.Query(Game);
         let newGame = new Game();
         newGame.set("player1", Parse.User.current().get('username'));
         newGame.set("player1_position", 0);
         newGame.set("player2_position", 0);
+        newGame.set("turn", 1);
         newGame.save(null, {
             success: function(new_game) {
-                let subscription = query.subscribe();
-                subscription.on('update', (game) => {
-                    dispatch({
-                        type: PLAY,
-                        player2: game.get('player2'),
-                        position: game.get('player2_position')
-                    })
-                });
                 dispatch({
                     type: CREATE_NEW_GAME_REQUEST,
                     game: new_game
@@ -243,9 +274,12 @@ export const createNewGame = () => {
                     dispatch({
                         type: PLAY,
                         player2: 'bot',
-                        position: 0,
+                        player1: Parse.User.current().get('username'),
+                        position1: 0,
+                        position2: 0,
+                        turn: 1,
                     })
-                }, 20000)
+                },  20000)
             },
             error: function(new_game, error) {
                 alert('Failed to create new Game, with error code: ' + error.message);
@@ -255,17 +289,10 @@ export const createNewGame = () => {
 }
 
 export const joinToGame = (gameId) => {
+    let Game = Parse.Object.extend("Game");
+    let query = new Parse.Query(Game);
+    let subscription = query.subscribe();
     return dispatch => {
-        let Game = Parse.Object.extend("Game");
-        let subscription = Game.subscribe();
-        subscription.on('update', (game) => {
-            alert('update')
-            dispatch({
-                type: PLAY,
-                position: game.get('player1_position')
-            })
-        });
-        let query = new Parse.Query(Game);
         query.equalTo("objectId", gameId);
         query.find({
             success:function(list) {
@@ -277,6 +304,7 @@ export const joinToGame = (gameId) => {
                         type: JOIN_GAME,
                         game: game,
                         player1: game.get('player1'),
+                        turn: 1,
                     });
                     alert('you joined to this game ' + list[0].id)
                 }
