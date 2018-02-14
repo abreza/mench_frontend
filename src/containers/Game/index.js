@@ -36,6 +36,12 @@ const Game = props => {
         <div>
             {props.game?
                 <div>
+                    gameId={props.game.id}
+                    <br/>
+                    {props.player1}={props.place[0]}
+                    <br/>
+                    {props.player2}={props.place[1]}
+                    <br/>
                 <table style={{
                     backgroundImage: `url(${Background})`,
                     backgroundRepeat: 'no-repeat',
@@ -48,7 +54,7 @@ const Game = props => {
                     <img onClick={props.randomGenerator} style={{
                         width:'10%',
                         height:'10%',
-                    }} src={'toss.jpg'}></img>
+                    }} src={'toss.jpg'}/>
                     <p>{props.toss}</p>
                 </div>
             :
@@ -63,6 +69,8 @@ const mapStateToProps = state => ({
     game: state.funcs.game,
     toss: state.funcs.toss,
     place: state.funcs.place,
+    player2: state.funcs.player2,
+    player1: state.funcs.player1
 })
 
 const mapDispatchToProps = dispatch => bindActionCreators({

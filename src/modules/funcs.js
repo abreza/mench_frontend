@@ -5,20 +5,7 @@ export const SIGN_OUT = 'funcs/SIGN_OUT'
 export const SIGN_UP = 'funcs/SIGN_UP'
 export const CREATE_NEW_GAME_REQUEST = 'funcs/CREATE_NEW_GAME_REQUEST'
 export const JOIN_GAME = 'funcs/JOIN_GAME'
-export const WITH_PLAYER = 'funcs/WITH_PLAYER'
-export const WITH_BOT = 'funcs/WITH_BOT'
-
-const initialState = {
-    turn: 1,
-    place: [0,0],
-    myTurn: 1,
-    user: null,
-    player2: null,
-    game: null,
-    startGame: false,
-    finish: false,
-    toss: 0,
-}
+export const PLAY = 'funcs/PLAY'
 
 let map = new Map()
 map.set(1,38)
@@ -35,30 +22,50 @@ map.set(80,100)
 map.set(87,24)
 map.set(71,91)
 map.set(93,73)
+map.set(95,75)
 map.set(98,79)
+
+const initialState = {
+    turn: 1,
+    place: [0,0],
+    myTurn: 1,
+    user: null,
+    player1: null,
+    player2: null,
+    game: null,
+    startGame: false,
+    finish: false,
+    toss: 0,
+}
 
 export default (state = initialState, action) => {
     switch (action.type) {
         case CREATE_NEW_GAME_REQUEST:
             return{
                 ...state,
-                game: action.game
+                game: action.game,
+                myTurn: 1,
+                player1: state.user.get('username'),
+                player2: action.player2,
             }
         case JOIN_GAME:
             return{
                 ...state,
                 game: action.game,
-                startGame: true
+                startGame: true,
+                myTurn: 2,
+                player1: action.player1,
+                player2: state.user.get('username'),
             }
-        case WITH_PLAYER:
+        case PLAY:
+            if(state.player2 && state.player2!=action.player2)
+                return state
+            state.place[2 - state.myTurn] = action.position;
             return{
                 ...state,
-                player2: action.player2
-            }
-        case WITH_BOT:
-            return{
-                ...state,
-                player2: 'bot'
+                player2: action.player2,
+                turn: state.myTurn,
+                place: state.place,
             }
         case SIGN_UP:
             return{
@@ -76,32 +83,76 @@ export default (state = initialState, action) => {
                 user: null
             }
         case MOVE_REQUESTED:
-            let newPlace = state.place;
-            let random = parseInt((Math.random() * 6) + 1);
-            newPlace[state.turn - 1] += random;
-            if(map.get(newPlace[state.turn - 1]))
-                newPlace[state.turn - 1] = map.get(newPlace[state.turn - 1])
-            if(map.get(newPlace[state.turn - 1]) > 100)
-                return{
-                    ...state,
-                    turn: (state.turn) % 2 + 1,
-                    toss: random,
-                }
-            if(map.get(newPlace[state.turn - 1]) == 100)
-                return{
-                    ...state,
-                    place: newPlace,
-                    turn: (state.turn) % 2 + 1,
-                    toss: random,
-                    finish: true,
-                }
-            return{
-                ...state,
-                place: newPlace,
-                turn: (state.turn) % 2 + 1,
-                toss: random,
-            }
+            if(state.turn == state.myTurn){
+                let random = parseInt((Math.random() * 6) + 1);
+                let t = 0
+                if(state.player2 == 'bot'){
+                    if(state.place[t] + random <= 100){
+                        state.place[t] += random;
+                        state.place[t] = map.get(state.place[t]) || state.place[t]
+                        state.game.set('player' + (t + 1) + '_position', state.place[t])
+                        state.game.save()
+                        if(state.place[t] == 100){
+                            return{
+                                ...state,
+                                place: state.place,
+                                toss: random,
+                                finish: true,
+                            }
+                        }
+                    }
+                    state.game.set('player' + (t + 1) + '_position', state.place[t])
+                    state.game.save()
+                    random = parseInt((Math.random() * 6) + 1);
+                    t = 1
+                    if(state.place[t] + random <= 100){
+                        state.place[t] += random;
+                        state.place[t] = map.get(state.place[t]) || state.place[t]
+                        state.game.set('player' + (t + 1) + '_position', state.place[t])
+                        state.game.save()
+                        if(state.place[t] == 100){
+                            return{
+                                ...state,
+                                place: state.place,
+                                toss: random,
+                                finish: true,
+                            }
+                        }
 
+                    }
+                    state.game.set('player' + (t + 1) + '_position', state.place[t])
+                    state.game.save()
+                    return{
+                        ...state,
+                        place: state.place,
+                        toss: random,
+                    }
+                }
+                else{
+                    if(state.place[t] + random <= 100){
+                        state.place[t] += random;
+                        state.place[t] = map.get(state.place[t]) || state.place[t]
+                        state.game.set('player' + (t + 1) + '_position', state.place[t])
+                        state.game.save()
+                        if(state.place[t] == 100){
+                            return{
+                                ...state,
+                                place: state.place,
+                                toss: random,
+                                finish: true,
+                            }
+                        }
+
+                    }
+                    return{
+                        ...state,
+                        place: state.place,
+                        turn: (state.turn) % 2 + 1,
+                        toss: random,
+                    }
+                }
+            }
+            return state
         default:
             return state
     }
@@ -167,35 +218,34 @@ export const signUp = (username, password, first_name, last_name, gender, birthd
 export const createNewGame = () => {
     return dispatch => {
         let Game = Parse.Object.extend("Game");
+        let query = new Parse.Query(Game);
         let newGame = new Game();
         newGame.set("player1", Parse.User.current().get('username'));
+        newGame.set("player1_position", 0);
+        newGame.set("player2_position", 0);
         newGame.save(null, {
             success: function(new_game) {
+                let subscription = query.subscribe();
+                subscription.on('update', (game) => {
+                    dispatch({
+                        type: PLAY,
+                        player2: game.get('player2'),
+                        position: game.get('player2_position')
+                    })
+                });
                 dispatch({
                     type: CREATE_NEW_GAME_REQUEST,
                     game: new_game
                 });
-                let query = new Parse.Query(new_game);
-                let subscription = query.subscribe();
-                subscription.on('update', (game) => {
-                    dispatch({
-                        type: WITH_PLAYER,
-                        player2: game.get('player2')
-                    })
-                });
+                alert('created')
+
                 return setTimeout(() => {
-                    new_game.set('player2', 'bot');
-                    new_game.save(null, {
-                        success: function(ng) {
-                            dispatch({
-                                type: WITH_BOT
-                            })
-                        },
-                        error: function(ng, error) {
-                            alert('Failed to create new Game, with error code: ' + error.message);
-                        }
-                    });
-                }, 10000)
+                    dispatch({
+                        type: PLAY,
+                        player2: 'bot',
+                        position: 0,
+                    })
+                }, 20000)
             },
             error: function(new_game, error) {
                 alert('Failed to create new Game, with error code: ' + error.message);
@@ -207,21 +257,31 @@ export const createNewGame = () => {
 export const joinToGame = (gameId) => {
     return dispatch => {
         let Game = Parse.Object.extend("Game");
+        let subscription = Game.subscribe();
+        subscription.on('update', (game) => {
+            alert('update')
+            dispatch({
+                type: PLAY,
+                position: game.get('player1_position')
+            })
+        });
         let query = new Parse.Query(Game);
         query.equalTo("objectId", gameId);
         query.find({
             success:function(list) {
-                if(list.length){
+                if(list.length && !list[0].get('player2')){
+                    let game = list[0]
+                    game.set('player2', Parse.User.current().get('username'))
+                    game.save(null)
                     dispatch({
                         type: JOIN_GAME,
-                        game: list[0],
+                        game: game,
+                        player1: game.get('player1'),
                     });
                     alert('you joined to this game ' + list[0].id)
                 }
-
             },
             error: function(list) {
-
             }
         });
     }
